@@ -133,6 +133,222 @@ namespace DemoDebug
             for (int i = 0; i < numOutput; ++i)
                 outBias[i] = weights[k++];
         }
+
+        //get all weight for each neuron
+        public double[] GetWeights()
+        {
+            double[] result = new double[numWeights];
+            int k = 0;
+            for (int i = 0; i < inputToFhWeight.Length; ++i)
+                for (int j = 0; j < inputToFhWeight[0].Length; ++j)
+                    result[k++] = inputToFhWeight[i][j];
+            for (int i = 0; i < fhBias.Length; ++i)
+                result[k++] = fhBias[i];
+
+            for (int i = 0; i < fhToShWeight.Length; ++i)
+                for (int j = 0; j < fhToShWeight[0].Length; ++j)
+                    result[k++] = fhToShWeight[i][j];
+            for (int i = 0; i < shBias.Length; ++i)
+                result[k++] = shBias[i];
+
+            for (int i = 0; i < shToOutWeight.Length; ++i)
+                for (int j = 0; j < shToOutWeight[0].Length; ++j)
+                    result[k++] = shToOutWeight[i][j];
+
+            for (int i = 0; i < outBias.Length; ++i)
+                result[k++] = outBias[i];
+
+            return result;
+        }
+        //training for DNN
+        public double[] Train(double[][] trainData, int maxEpochs, double learningRate, double momentum)
+        {
+            // train using back-prop
+            // back-prop specific arrays
+            double[][] shoGrads = MakeMatrix(numSecondHidden, numOutput, 0.0); // second-hidden-to-output weight gradients
+            double[] shobGrads = new double[numOutput];                   // output bias gradients
+
+            double[][] fhshGrads = MakeMatrix(numFirstHidden, numSecondHidden, 0.0); // first-hidden-to-second-hidden weight gradients
+            double[] fhshbGrads = new double[numSecondHidden];                   // second hidden bias gradients
+
+            double[][] ifhGrads = MakeMatrix(numInput, numFirstHidden, 0.0);  // input-to-first-hidden weight gradients
+            double[] fhbGrads = new double[numFirstHidden];                   // first hidden bias gradients
+
+            double[] oSignals = new double[numOutput];                  // local gradient output signals - gradients w/o associated input terms
+            double[] fhSignals = new double[numFirstHidden];                  // local gradient first hidden node signals
+            double[] shSignals = new double[numSecondHidden];                  // local gradient second hidden node signals
+
+            // back-prop momentum specific arrays 
+            double[][] ifhPrevWeightsDelta = MakeMatrix(numInput, numFirstHidden, 0.0);
+            double[] fhPrevBiasesDelta = new double[numFirstHidden];
+            double[][] fhshPrevWeightsDelta = MakeMatrix(numFirstHidden, numSecondHidden, 0.0);
+            double[] shPrevBiasesDelta = new double[numSecondHidden];
+            double[][] shoPrevWeightsDelta = MakeMatrix(numSecondHidden, numOutput, 0.0);
+            double[] oPrevBiasesDelta = new double[numOutput];
+
+            int epoch = 0;
+            double[] xValues = new double[numInput]; // inputs
+            double[] tValues = new double[numOutput]; // target values
+            double derivative = 0.0;
+            double errorSignal = 0.0;
+
+            //sequece of data training
+            int[] sequence = new int[trainData.Length];
+            for (int i = 0; i < sequence.Length; ++i)
+                sequence[i] = i;
+
+            int errInterval = maxEpochs / 10; // interval to check error
+            while (epoch < maxEpochs)
+            {
+                ++epoch;
+                if (epoch % errInterval == 0 && epoch < maxEpochs)
+                {
+                    //get error from MSE
+                    double trainErr = Error(trainData);
+                    Console.WriteLine("epoch = " + epoch + "  MSE error = " +
+                      trainErr.ToString("F4"));
+                    //Console.ReadLine();
+                }
+
+                Shuffle(sequence); // visit each training data in random order
+                for (int ii = 0; ii < trainData.Length; ++ii)
+                {
+                    int idx = sequence[ii];
+                    Array.Copy(trainData[idx], xValues, numInput);
+                    Array.Copy(trainData[idx], numInput, tValues, 0, numOutput);
+                    ComputeOutputs(xValues); // copy xValues in, compute outputs
+
+                    // indices: i = inputs, j1 = first hiddens,j2 = second hiddens, k = outputs
+
+                    // 1. compute output node signals (assumes softmax)
+                    for (int k = 0; k < numOutput; ++k)
+                    {
+                        errorSignal = tValues[k] - finalOutputs[k];  // Wikipedia uses (o-t)
+                        derivative = (1 - finalOutputs[k]) * finalOutputs[k]; // for softmax
+                        oSignals[k] = errorSignal * derivative;
+                    }
+
+                    // 2. compute second-hidden-to-output weight gradients using output signals
+                    for (int j2 = 0; j2 < numSecondHidden; ++j2)
+                        for (int k = 0; k < numOutput; ++k)
+                            shoGrads[j2][k] = oSignals[k] * shOutputs[j2];
+
+                    // 2b. compute output bias gradients using output signals
+                    for (int k = 0; k < numOutput; ++k)
+                        shobGrads[k] = oSignals[k] * 1.0; // dummy assoc. input value
+
+                    // 3. compute output second-hidden node signals (assumes tanh)
+                    for (int j2 = 0; j2 < numSecondHidden; ++j2)
+                    {
+                        derivative = (1 + shOutputs[j2]) * (1 - shOutputs[j2]); // for tanh
+                        double sum = 0.0; // need sums of output signals times second-hidden-to-output weights
+                        for (int k = 0; k < numOutput; ++k)
+                        {
+                            sum += oSignals[k] * shToOutWeight[j2][k]; // represents error signal
+                        }
+                        shSignals[j2] = derivative * sum;
+                    }
+
+                    // 4. compute first-hidden-to-second-hidden weight gradients using output signals
+                    for (int j1 = 0; j1 < numFirstHidden; ++j1)
+                        for (int j2 = 0; j2 < numSecondHidden; ++j2)
+                            fhshGrads[j1][j2] = shSignals[j2] * fhOutputs[j1];
+
+                    // 4b. compute output bias gradients using output signals
+                    for (int j2 = 0; j2 < numSecondHidden; ++j2)
+                        fhshbGrads[j2] = shSignals[j2] * 1.0; // dummy assoc. input value
+
+                    // 5. compute  output first-hidden hidden node signals (assumes tanh)
+                    for (int j1 = 0; j1 < numFirstHidden; ++j1)
+                    {
+                        derivative = (1 + fhOutputs[j1]) * (1 - fhOutputs[j1]); // for tanh
+                        double sum = 0.0; // need sums of output signals times hidden-to-output weights
+                        for (int j2 = 0; j2 < numSecondHidden; ++j2)
+                        {
+                            sum += shSignals[j2] * fhToShWeight[j1][j2]; // represents error signal
+                        }
+                        fhSignals[j1] = derivative * sum;
+                    }
+
+                    // 6. compute input-first hidden weight gradients
+                    for (int i = 0; i < numInput; ++i)
+                        for (int j1 = 0; j1 < numFirstHidden; ++j1)
+                            ifhGrads[i][j1] = fhSignals[j1] * inputs[i];
+
+                    // 7b. compute first-hidden node bias gradients
+                    for (int j1 = 0; j1 < numFirstHidden; ++j1)
+                        fhbGrads[j1] = fhSignals[j1] * 1.0; // dummy 1.0 input
+
+                    // == update weights and biases ===============/
+
+                    // update input-to-first-hidden weights
+                    for (int i = 0; i < numInput; ++i)
+                    {
+                        for (int j1 = 0; j1 < numFirstHidden; ++j1)
+                        {
+                            double delta = ifhGrads[i][j1] * learningRate;
+                            inputToFhWeight[i][j1] += delta; // would be -= if (o-t)
+                            inputToFhWeight[i][j1] += ifhPrevWeightsDelta[i][j1] * momentum;
+                            ifhPrevWeightsDelta[i][j1] = delta; // save for next time
+                        }
+                    }
+
+                    // update first-hidden biases
+                    for (int j1 = 0; j1 < numFirstHidden; ++j1)
+                    {
+                        double delta = fhbGrads[j1] * learningRate;
+                        fhBias[j1] += delta;
+                        fhBias[j1] += fhPrevBiasesDelta[j1] * momentum;
+                        fhPrevBiasesDelta[j1] = delta;
+                    }
+
+                    // update first-hidden-to-second-hidden weights
+                    for (int j1 = 0; j1 < numFirstHidden; ++j1)
+                    {
+                        for (int j2 = 0; j2 < numSecondHidden; ++j2)
+                        {
+                            double delta = fhshGrads[j1][j2] * learningRate;
+                            fhToShWeight[j1][j2] += delta;
+                            fhToShWeight[j1][j2] += fhshPrevWeightsDelta[j1][j2] * momentum;
+                            fhshPrevWeightsDelta[j1][j2] = delta;
+                        }
+                    }
+
+                    // update second-hidden biases
+                    for (int j2 = 0; j2 < numSecondHidden; ++j2)
+                    {
+                        double delta = fhshbGrads[j2] * learningRate;
+                        shBias[j2] += delta;
+                        shBias[j2] += shPrevBiasesDelta[j2] * momentum;
+                        shPrevBiasesDelta[j2] = delta;
+                    }
+
+                    // update second-hidden-to-output weights
+                    for (int j2 = 0; j2 < numSecondHidden; ++j2)
+                    {
+                        for (int k = 0; k < numOutput; ++k)
+                        {
+                            double delta = shoGrads[j2][k] * learningRate;
+                            shToOutWeight[j2][k] += delta;
+                            shToOutWeight[j2][k] += shoPrevWeightsDelta[j2][k] * momentum;
+                            shoPrevWeightsDelta[j2][k] = delta;
+                        }
+                    }
+
+                    // update output node biases
+                    for (int k = 0; k < numOutput; ++k)
+                    {
+                        double delta = shobGrads[k] * learningRate;
+                        outBias[k] += delta;
+                        outBias[k] += oPrevBiasesDelta[k] * momentum;
+                        oPrevBiasesDelta[k] = delta;
+                    }
+
+                } // each training item
+            }// while
+            double[] bestWts = GetWeights();
+            return bestWts;
+        }
         
         //computeoutput
         public double[] ComputeOutputs(double[] xValues)
@@ -151,14 +367,14 @@ namespace DemoDebug
             for (int i = 0; i < numFirstHidden; ++i)  // add biases to a sums
                 firstSums[i] += this.fhBias[i];
 
-            Console.WriteLine("\nInternal aSums:");
-            ShowVector(firstSums, firstSums.Length, 4, true);
+            //Console.WriteLine("\nInternal aSums:");
+            //ShowVector(firstSums, firstSums.Length, 4, true);
 
             for (int i = 0; i < numFirstHidden; ++i)   // apply activation
                 this.fhOutputs[i] = HyperTanFunction(firstSums[i]); // hard-coded
 
-            Console.WriteLine("\nInternal first hidden Outputs:");
-            ShowVector(fhOutputs, fhOutputs.Length, 4, true);
+           // Console.WriteLine("\nInternal first hidden Outputs:");
+            //ShowVector(fhOutputs, fhOutputs.Length, 4, true);
 
             for (int j = 0; j < numSecondHidden; ++j)  // compute sum of (ab) weights * a outputs = local inputs
                 for (int i = 0; i < numFirstHidden; ++i)
@@ -167,14 +383,14 @@ namespace DemoDebug
             for (int i = 0; i < numSecondHidden; ++i)  // add biases to b sums
                 secondSums[i] += this.shBias[i];
 
-            Console.WriteLine("\nInternal bSums:");
-            ShowVector(secondSums, secondSums.Length, 4, true);
+            //Console.WriteLine("\nInternal bSums:");
+            //ShowVector(secondSums, secondSums.Length, 4, true);
 
             for (int i = 0; i < numSecondHidden; ++i)   // apply activation
                 this.shOutputs[i] = HyperTanFunction(secondSums[i]); // hard-coded
 
-            Console.WriteLine("\nInternal bOutputs:");
-            ShowVector(shOutputs, shOutputs.Length, 4, true);
+           // Console.WriteLine("\nInternal bOutputs:");
+          //  ShowVector(shOutputs, shOutputs.Length, 4, true);
 
             for (int j = 0; j < numOutput; ++j)   // compute sum of (bo) weights * b outputs = local inputs
                 for (int i = 0; i < numSecondHidden; ++i)
@@ -183,8 +399,8 @@ namespace DemoDebug
             for (int i = 0; i < numOutput; ++i)  // add biases to input-to-hidden sums
                 outSums[i] += outBias[i];
 
-            Console.WriteLine("\nInternal oSums:");
-            ShowVector(outSums, outSums.Length, 4, true);
+           // Console.WriteLine("\nInternal oSums:");
+           // ShowVector(outSums, outSums.Length, 4, true);
 
             double[] softOut = Softmax(outSums); // softmax activation does all outputs at once for efficiency
             Array.Copy(softOut, finalOutputs, softOut.Length);
@@ -231,6 +447,95 @@ namespace DemoDebug
                 Console.Write(vector[i].ToString("F" + decimals).PadLeft(decimals + 4) + " ");
             }
             if (newLine == true) Console.WriteLine("");
+        }
+
+        //helper for creating matrix
+        private static double[][] MakeMatrix(int rows,
+         int cols, double v) // helper for ctor, Train
+        {
+            double[][] result = new double[rows][];
+            for (int r = 0; r < result.Length; ++r)
+                result[r] = new double[cols];
+            for (int i = 0; i < rows; ++i)
+                for (int j = 0; j < cols; ++j)
+                    result[i][j] = v;
+            return result;
+        }
+
+        //mean squared error
+        private double Error(double[][] trainData)
+        {
+            // average squared error per training item
+            double sumSquaredError = 0.0;
+            double[] xValues = new double[numInput]; // first numInput values in trainData
+            double[] tValues = new double[numOutput]; // last numOutput values
+
+            // walk thru each training case. looks like (6.9 3.2 5.7 2.3) (0 0 1)
+            for (int i = 0; i < trainData.Length; ++i)
+            {
+                Array.Copy(trainData[i], xValues, numInput);
+                Array.Copy(trainData[i], numInput, tValues, 0, numOutput); // get target values
+                double[] yValues = this.ComputeOutputs(xValues); // outputs using current weights
+                for (int j = 0; j < numOutput; ++j)
+                {
+                    double err = tValues[j] - yValues[j];
+                    sumSquaredError += err * err;
+                }
+            }
+            return sumSquaredError / trainData.Length;
+        } // MeanSquaredError
+
+        //random order of sequence
+        private void Shuffle(int[] sequence) // instance method
+        {
+            for (int i = 0; i < sequence.Length; ++i)
+            {
+                int r = rnd.Next(i, sequence.Length);
+                int tmp = sequence[r];
+                sequence[r] = sequence[i];
+                sequence[i] = tmp;
+            }
+        } // Shuffle
+
+        public double Accuracy(double[][] testData)
+        {
+            // percentage correct using winner-takes all
+            int numCorrect = 0;
+            int numWrong = 0;
+            double[] xValues = new double[numInput]; // inputs
+            double[] tValues = new double[numOutput]; // targets
+            double[] yValues; // computed Y
+
+            for (int i = 0; i < testData.Length; ++i)
+            {
+                Array.Copy(testData[i], xValues, numInput); // get x-values
+                Array.Copy(testData[i], numInput, tValues, 0, numOutput); // get t-values
+                yValues = this.ComputeOutputs(xValues);
+                int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
+                int tMaxIndex = MaxIndex(tValues);
+
+                if (maxIndex == tMaxIndex)
+                    ++numCorrect;
+                else
+                    ++numWrong;
+            }
+            return (numCorrect * 1.0) / (numCorrect + numWrong);
+        }
+
+        private static int MaxIndex(double[] vector) // helper for Accuracy()
+        {
+            // index of largest value
+            int bigIndex = 0;
+            double biggestVal = vector[0];
+            for (int i = 0; i < vector.Length; ++i)
+            {
+                if (vector[i] > biggestVal)
+                {
+                    biggestVal = vector[i];
+                    bigIndex = i;
+                }
+            }
+            return bigIndex;
         }
     }
 }
