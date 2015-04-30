@@ -3,15 +3,53 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace DemoDebug
 {
     class Program
     {
+        public static List<string> labels = new List<string>();
+        public static double[] outputsFromLabel;
+        public static List<double[]> patterns = new List<double[]>();
+
         static void Main(string[] args)
         {
             //testDNN();
             testDNNTraining();
+        }
+
+        public static void LoadData(string file, int dimensions)
+        {
+
+            StreamReader reader = File.OpenText(file);
+            reader.ReadLine(); // Ignore first line.
+            while (!reader.EndOfStream)
+            {
+               
+                string[] line = reader.ReadLine().Split(',');
+
+                labels.Add(line[0]);
+                if(line[0] == "0")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[2] = 1;
+                }
+                
+                double[] inputs = new double[dimensions];
+
+                for (int i = 0; i < dimensions; i++)
+                {
+                    //harcoded here
+                    //if (double.Parse(line[i + 1]) == 10.0)
+                    //    inputs[i] = double.Parse(line[i + 1]) - 9.0;
+                    //else
+                    inputs[i] = double.Parse(line[i + 1]);
+                }
+                patterns.Add(inputs);
+            }
+            reader.Close();
         }
 
         public static void testDNN()
@@ -54,19 +92,20 @@ namespace DemoDebug
         }
         public static void testDNNTraining()
         {
-            Console.WriteLine("\nBegin DNN with back-propagation demo");
-            DateTime startTime = DateTime.Now;
-            int numInput = 4;
-            int numHiddenA = 1;//5;
+            int numInput = 784;
+            int numHiddenA = 5;//5;
             int numHiddenB = 5;//5;
-            int numOutput = 3;
+            int numOutput = 4;//3;
             int numRows = 1000;
             int seed = 1; // gives nice demo
 
+            Console.WriteLine("\nBegin DNN with back-propagation demo");
+            DateTime startTime = DateTime.Now;
+           
             Console.WriteLine("\nGenerating " + numRows +
               " artificial data items with " + numInput + " features");
-            double[][] allData = MakeAllData(numInput, numHiddenA,numHiddenB, numOutput,
-              numRows, seed);
+            double[][] allData = MakeAllDataFromCSV(numInput, numHiddenA,numHiddenB, numOutput,
+              numRows, seed, "train.csv");
             Console.WriteLine("Done");
 
             //ShowMatrix(allData, allData.Length, 2, true);
@@ -115,6 +154,7 @@ namespace DemoDebug
             Console.WriteLine("\nEnd DNN with back-propagation demo\n");
             Console.ReadLine();
         }
+
         static public void ShowVector(double[] vector, int valsPerRow, int decimals, bool newLine)
         {
             for (int i = 0; i < vector.Length; ++i)
@@ -179,6 +219,132 @@ namespace DemoDebug
                 for (int i = 0; i < numOutput; ++i) // outputs
                     result[r][c++] = oneOfN[i];
             } // each row
+            return result;
+        } // MakeAllData
+
+        static double[][] MakeAllDataFromCSV(int numInput, int numFirstHidden, int numSecondHidden,
+          int numOutput, int numRows, int seed, string file)
+        {
+            Random rnd = new Random(seed);
+            int numWeights = (numInput * numFirstHidden) + numFirstHidden + (numFirstHidden * numSecondHidden) +
+                numSecondHidden + (numSecondHidden * numOutput) + numOutput;
+
+            double[] weights = new double[numWeights]; // actually weights & biases
+            for (int i = 0; i < numWeights; ++i)
+                weights[i] = rnd.NextDouble(); // [0.0 to 1.0]
+
+            Console.WriteLine("Generating weights and biases:");
+            ShowVector(weights, 2, 10, true);
+
+            double[][] result = new double[numRows][]; // allocate return-result
+            for (int i = 0; i < numRows; ++i)
+                result[i] = new double[numInput + numOutput]; // 1-of-N in last column
+
+            DnnStaticTwoHl gnn =
+              new DnnStaticTwoHl(numInput, numFirstHidden, numSecondHidden, numOutput); // generating NN
+            gnn.SetWeights(weights);
+
+            StreamReader reader = File.OpenText(file);
+            reader.ReadLine(); // Ignore first line.
+            int r = 0;
+            while (!reader.EndOfStream)
+            {
+
+                string[] line = reader.ReadLine().Split(',');
+                outputsFromLabel = new double[numOutput];
+                labels.Add(line[0]);
+
+                //HARDCODED
+                if (line[0] == "0")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[2] = 0;
+                    outputsFromLabel[3] = 0;
+                }
+                if (line[0] == "1")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[2] = 0;
+                    outputsFromLabel[3] = 1;
+                }
+                if (line[0] == "2")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[2] = 1;
+                    outputsFromLabel[3] = 0;
+                }
+                if (line[0] == "3")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[2] = 1;
+                    outputsFromLabel[3] = 1;
+                }
+                if (line[0] == "4")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 1;
+                    outputsFromLabel[2] = 0;
+                    outputsFromLabel[3] = 0;
+                }
+                if (line[0] == "5")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 1;
+                    outputsFromLabel[2] = 0;
+                    outputsFromLabel[3] = 1;
+                }
+                if (line[0] == "6")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 1;
+                    outputsFromLabel[2] = 1;
+                    outputsFromLabel[3] = 0;
+                }
+                if (line[0] == "7")
+                {
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 1;
+                    outputsFromLabel[2] = 1;
+                    outputsFromLabel[3] = 1;
+                }
+                if (line[0] == "8")
+                {
+                    outputsFromLabel[0] = 1;
+                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[2] = 0;
+                    outputsFromLabel[3] = 0;
+                }
+                if (line[0] == "9")
+                {
+                    outputsFromLabel[0] = 1;
+                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[2] = 0;
+                    outputsFromLabel[3] = 1;
+                }
+
+                double[] inputs = new double[numInput];
+
+                for (int i = 0; i < numInput; i++)
+                {
+                    inputs[i] = double.Parse(line[i]);
+                }
+                //patterns.Add(inputs);
+
+                // place inputs and 1-of-N output values into curr row
+                int c = 0; // column into result[][]
+                for (int i = 0; i < numInput; ++i) // inputs
+                    result[r][c++] = inputs[i]/255d;
+                for (int i = 0; i < numOutput; ++i) // outputs
+                    result[r][c++] = outputsFromLabel[i];
+
+                r++;
+            }
+            reader.Close();
+            
             return result;
         } // MakeAllData
 
