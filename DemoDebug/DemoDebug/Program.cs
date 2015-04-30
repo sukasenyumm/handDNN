@@ -93,10 +93,10 @@ namespace DemoDebug
         public static void testDNNTraining()
         {
             int numInput = 784;
-            int numHiddenA = 5;//5;
-            int numHiddenB = 5;//5;
+            int numHiddenA = 1;//5;
+            int numHiddenB = 8;//5;
             int numOutput = 4;//3;
-            int numRows = 1000;
+            int numRows = 10000;
             int seed = 1; // gives nice demo
 
             Console.WriteLine("\nBegin DNN with back-propagation demo");
@@ -231,7 +231,7 @@ namespace DemoDebug
 
             double[] weights = new double[numWeights]; // actually weights & biases
             for (int i = 0; i < numWeights; ++i)
-                weights[i] = rnd.NextDouble(); // [0.0 to 1.0]
+                weights[i] = 20.0 * rnd.NextDouble() - 10.0; // [-10.0 to 10.0]
 
             Console.WriteLine("Generating weights and biases:");
             ShowVector(weights, 2, 10, true);
