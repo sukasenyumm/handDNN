@@ -96,8 +96,8 @@ namespace DemoDebug
         private void InitWeight()
         {
             double[] weight = new double[numWeights];
-            double min = -0.01;
-            double max = 0.01;
+            double min = 0.0001;
+            double max = 0.001;
             for (int i = 0; i < weight.Length; ++i)
                 weight[i] = RandomRange(min, max);
 
@@ -254,7 +254,7 @@ namespace DemoDebug
                         for (int j2 = 0; j2 < numSecondHidden; ++j2)
                             fhshGrads[j1][j2] = shSignals[j2] * fhOutputs[j1];
 
-                    // 4b. compute output bias gradients using output signals
+                    // 4b. compute second-hidden bias gradients using output signals
                     for (int j2 = 0; j2 < numSecondHidden; ++j2)
                         fhshbGrads[j2] = shSignals[j2] * 1.0; // dummy assoc. input value
 
@@ -409,6 +409,13 @@ namespace DemoDebug
             Array.Copy(this.finalOutputs, retResult, retResult.Length);
             return retResult;
 
+        }
+
+         private static double SigmoidFunction(double x)
+        {
+            if (x < -20.0) return 0.0;
+            else if (x > 20.0) return 1.0;
+            else return 1.0 / (1.0 + Math.Exp(-x));
         }
 
         //Hyperbolic Tangent Activation Function

@@ -93,10 +93,10 @@ namespace DemoDebug
         public static void testDNNTraining()
         {
             int numInput = 784;
-            int numHiddenA = 1;//5;
-            int numHiddenB = 8;//5;
-            int numOutput = 4;//3;
-            int numRows = 10000;
+            int numHiddenA = 32;//5;
+            int numHiddenB = 32;//5;
+            int numOutput = 10;//3;
+            int numRows = 300;//100;
             int seed = 1; // gives nice demo
 
             Console.WriteLine("\nBegin DNN with back-propagation demo");
@@ -105,7 +105,7 @@ namespace DemoDebug
             Console.WriteLine("\nGenerating " + numRows +
               " artificial data items with " + numInput + " features");
             double[][] allData = MakeAllDataFromCSV(numInput, numHiddenA,numHiddenB, numOutput,
-              numRows, seed, "train.csv");
+              numRows, seed, "train1000.csv");
             Console.WriteLine("Done");
 
             //ShowMatrix(allData, allData.Length, 2, true);
@@ -261,69 +261,129 @@ namespace DemoDebug
                     outputsFromLabel[1] = 0;
                     outputsFromLabel[2] = 0;
                     outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 1;
                 }
                 if (line[0] == "1")
                 {
                     outputsFromLabel[0] = 0;
                     outputsFromLabel[1] = 0;
                     outputsFromLabel[2] = 0;
-                    outputsFromLabel[3] = 1;
+                    outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 1;
+                    outputsFromLabel[9] = 0;
                 }
                 if (line[0] == "2")
                 {
                     outputsFromLabel[0] = 0;
                     outputsFromLabel[1] = 0;
-                    outputsFromLabel[2] = 1;
+                    outputsFromLabel[2] = 0;
                     outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 1;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 0;
                 }
                 if (line[0] == "3")
                 {
                     outputsFromLabel[0] = 0;
                     outputsFromLabel[1] = 0;
-                    outputsFromLabel[2] = 1;
-                    outputsFromLabel[3] = 1;
+                    outputsFromLabel[2] = 0;
+                    outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 1;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 0;
                 }
                 if (line[0] == "4")
                 {
                     outputsFromLabel[0] = 0;
-                    outputsFromLabel[1] = 1;
+                    outputsFromLabel[1] = 0;
                     outputsFromLabel[2] = 0;
                     outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 1;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 0;
                 }
                 if (line[0] == "5")
                 {
                     outputsFromLabel[0] = 0;
-                    outputsFromLabel[1] = 1;
+                    outputsFromLabel[1] = 0;
                     outputsFromLabel[2] = 0;
-                    outputsFromLabel[3] = 1;
+                    outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 1;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 0;
                 }
                 if (line[0] == "6")
                 {
                     outputsFromLabel[0] = 0;
-                    outputsFromLabel[1] = 1;
-                    outputsFromLabel[2] = 1;
-                    outputsFromLabel[3] = 0;
+                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[2] = 0;
+                    outputsFromLabel[3] = 1;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 1;
                 }
                 if (line[0] == "7")
                 {
                     outputsFromLabel[0] = 0;
-                    outputsFromLabel[1] = 1;
+                    outputsFromLabel[1] = 0;
                     outputsFromLabel[2] = 1;
-                    outputsFromLabel[3] = 1;
+                    outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 0;
                 }
                 if (line[0] == "8")
                 {
-                    outputsFromLabel[0] = 1;
-                    outputsFromLabel[1] = 0;
+                    outputsFromLabel[0] = 0;
+                    outputsFromLabel[1] = 1;
                     outputsFromLabel[2] = 0;
                     outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 0;
                 }
                 if (line[0] == "9")
                 {
                     outputsFromLabel[0] = 1;
                     outputsFromLabel[1] = 0;
                     outputsFromLabel[2] = 0;
-                    outputsFromLabel[3] = 1;
+                    outputsFromLabel[3] = 0;
+                    outputsFromLabel[4] = 0;
+                    outputsFromLabel[5] = 0;
+                    outputsFromLabel[6] = 0;
+                    outputsFromLabel[7] = 0;
+                    outputsFromLabel[8] = 0;
+                    outputsFromLabel[9] = 0;
                 }
 
                 double[] inputs = new double[numInput];
@@ -337,7 +397,7 @@ namespace DemoDebug
                 // place inputs and 1-of-N output values into curr row
                 int c = 0; // column into result[][]
                 for (int i = 0; i < numInput; ++i) // inputs
-                    result[r][c++] = inputs[i]/255d;
+                    result[r][c++] = (inputs[i] / 255d);
                 for (int i = 0; i < numOutput; ++i) // outputs
                     result[r][c++] = outputsFromLabel[i];
 
